@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.3 - 2026-10-26
+#### Bug Fixes
+- 修正发布资产链接路径 - (f807c29) - HttpAnimations
+
+- - -
+
 ## v0.1.2 - 2026-10-26
 #### Bug Fixes
 - 发布同步改用 Bearer 认证 - (0a450b1) - HttpAnimations
