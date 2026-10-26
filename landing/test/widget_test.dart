@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mirada_landing/main.dart';
+// ignore: avoid_relative_lib_imports
+import '../lib/main.dart';
 
 void main() {
   testWidgets('landing renders', (t) async {
