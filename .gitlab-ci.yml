@@ -49,7 +49,7 @@ github-sync:
         REMOTE_MAIN=$(git ls-remote github refs/heads/main | awk '{print $1}')
         SINCE=""
         [ "$REMOTE_MAIN" != "$SHA" ] && SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        git push github HEAD:main
+        git push github HEAD:refs/heads/main
         RUN_ID=$(bash scripts/watch-github-run.sh find --sha "$SHA" --event push --branch main ${SINCE:+--since "$SINCE"} || true)
         [ -z "$RUN_ID" ] && { echo "No GitHub run for $SHA" >&2; exit 1; }
         bash scripts/watch-github-run.sh "$RUN_ID"
