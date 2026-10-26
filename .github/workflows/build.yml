@@ -133,31 +133,27 @@ jobs:
       - name: Build rpm
         run: |
           ARCH_RPM=$([ "${{ matrix.arch }}" = "x86_64" ] && echo x86_64 || echo aarch64)
-          cat > /tmp/mirada.spec <<SPEC
+          mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
+          cat > rpmbuild/SPECS/mirada.spec <<SPEC
           Name: mirada
           Version: $VERSION
           Release: 1
           Summary: Mirror and control your iPhone from Linux
           License: AGPL-3.0
+          BuildArch: $ARCH_RPM
           %description
           Mirror and control your iPhone from Linux.
-          %files
-          /
-          %prep
-          %build
           %install
           mkdir -p %{buildroot}
-          cp -r "$GITHUB_WORKSPACE/pkgroot/"* %{buildroot}/
-          %post
-          %postun
+          cp -r $GITHUB_WORKSPACE/pkgroot/* %{buildroot}/
+          %files
+          /usr/bin/mirada
+          /usr/lib/mirada
+          /usr/share/applications/mirada.desktop
+          /usr/share/icons/hicolor/256x256/apps/mirada.png
           SPEC
-          rpmbuild -bb --target "$ARCH_RPM" --buildroot "$GITHUB_WORKSPACE/pkgroot" --define "_topdir $GITHUB_WORKSPACE/rpmbuild" /tmp/mirada.spec || {
-            mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
-            cp /tmp/mirada.spec rpmbuild/SPECS/
-            sed -i 's|%files|%%files|' /dev/null 2>/dev/null || true
-          }
-          find rpmbuild -name '*.rpm' -exec cp {} "artifacts/" \; 2>/dev/null || true
-          ls artifacts/
+          rpmbuild -bb --buildroot "$GITHUB_WORKSPACE/rpmbuild/BUILDROOT" --define "_topdir $GITHUB_WORKSPACE/rpmbuild" rpmbuild/SPECS/mirada.spec
+          find rpmbuild/RPMS -name '*.rpm' -exec cp {} artifacts/ \;
       - name: Build AppImage
         run: |
           APPIMAGE_ARCH=$([ "${{ matrix.arch }}" = "x86_64" ] && echo x86_64 || echo aarch64)
