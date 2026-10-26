@@ -102,7 +102,7 @@ jobs:
         run: |
           git clone --depth 1 -b ${{ env.FLUTTER_VERSION }} https://github.com/flutter/flutter.git $HOME/flutter
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
-          flutter precache --linux
+          $HOME/flutter/bin/flutter precache --linux
       - name: Build Linux bundle
         run: flutter build linux --release
       - name: Stage package tree
