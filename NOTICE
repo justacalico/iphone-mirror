@@ -1,0 +1,21 @@
+Attribution and upstream notes
+
+This project's design and (where noted) byte-level protocol data draw on the
+following open-source work:
+
+- UxPlay (https://github.com/FDH2/UxPlay), GPLv3. The AirPlay receiver this
+  app runs as a subprocess.
+- RPiPlay (https://github.com/FD-/RPiPlay), GPLv3. UxPlay's ancestor.
+- AirPlayPC / pcairplay (https://github.com/gbulog/pcairplay), MIT,
+  by Grega Bulog.
+- AirBridge (https://github.com/NolanCotter/AirBridge), MIT, by Nolan
+  Cotter. Source of the validated BLE HID report descriptor and the iOS
+  AssistiveTouch quirks documented in docs/04.
+- Tether (https://github.com/zackb/tether), MIT. Bluetooth/BlueZ pairing
+  lessons cited in docs/07 and docs/research.
+- pymobiledevice3 (https://github.com/doronz88/pymobiledevice3), GPLv3.
+  Optional sidecar dependency for the USB input path.
+
+Each retains its own copyright and license. None of these projects or their
+authors endorse this project. Apple, iPhone, AirPlay, and iOS are trademarks
+of Apple Inc.; this is an independent interoperability project.
