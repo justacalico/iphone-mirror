@@ -108,7 +108,7 @@ github-release-sync:
 pages:
   stage: pages
   tags: [linux-truenas]
-  image: ghcr.io/cirruslabs/flutter:stable
+  image: ghcr.io/cirruslabs/flutter:3.47.7
   rules:
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
