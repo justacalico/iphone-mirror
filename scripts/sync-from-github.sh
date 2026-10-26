@@ -69,11 +69,18 @@ if [ -n "${GITLAB_RELEASE_SSH_KEY:-}" ]; then
   git push -f gitlab-ssh "$RELEASE_TAG"
 fi
 
-# Mirror to a GitLab release. The tag is kept the same as GitHub.
-# glab in CI will use CI_JOB_TOKEN when GLAB_ENABLE_CI_AUTOLOGIN is set.
-glab release create "$RELEASE_TAG" \
-  --name "${APP_NAME:-$RELEASE_TAG} $RELEASE_TAG" \
-  --notes "Mirrored from the GitHub release." \
-  --ref "$RELEASE_COMMIT" \
-  --use-package-registry \
-  "$PROJECT_DIR/release-assets"/*
+# Mirror to a GitLab release via the API (PAT auth; CI job token cannot create releases).
+API="https://gitlab.com/api/v4/projects/$CI_PROJECT_ID"
+LINKS=""
+for f in release-assets/*; do
+  NAME=$(basename "$f")
+  ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$NAME" 2>/dev/null || echo "$NAME")
+  curl -fsSL --request PUT --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+    --upload-file "$f" \
+    "$API/packages/generic/release-assets/$RELEASE_TAG/$ENC"
+  LINKS="${LINKS}{\"name\":\"$NAME\",\"url\":\"https://gitlab.com/$CI_PROJECT_PATH/-/releases/$RELEASE_TAG/downloads/$NAME\",\"direct_asset_path\":\"release-assets/$RELEASE_TAG/$ENC\",\"link_type\":\"package\"},"
+done
+LINKS="${LINKS%,}"
+curl -fsSL --request POST --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --header "Content-Type: application/json" \
+  --data "{\"name\":\"${APP_NAME:-$RELEASE_TAG} $RELEASE_TAG\",\"tag_name\":\"$RELEASE_TAG\",\"description\":\"Mirrored from the GitHub release.\",\"assets\":{\"links\":[$LINKS]}}" \
+  "$API/releases"
