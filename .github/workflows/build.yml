@@ -49,8 +49,6 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - uses: eroshenkoam/allure-cocogitto-action@v1
-        if: false
       - name: Install cocogitto
         run: |
           curl -fsSL -o /tmp/cog.tar.gz "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-x86_64-unknown-linux-musl.tar.gz"
