@@ -53,3 +53,4 @@ android/key.properties
 coverage/
 build/
 .gpg/
+android/local.properties
