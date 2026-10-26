@@ -117,6 +117,12 @@ void main() {
     });
   });
 
+  test('Phone fields', () {
+    final p = Phone(id: 'a', name: 'b');
+    expect(p.paired, isFalse);
+    expect(Phone(id: 'a', name: 'b', paired: true).paired, isTrue);
+  });
+
   group('MirrorController', () {
     final phone = const Phone(id: '9', name: 'My iPhone');
 
