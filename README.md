@@ -1,49 +1,58 @@
-# iPhone Mirror for Linux
+# Mirada
 
-Mirror and control an iPhone from a Linux desktop. The phone shows up in
-Control Center > Screen Mirroring like an Apple TV, the screen renders inside
-the app window, and taps, typing, and hardware buttons go back over Bluetooth
-or USB.
+**Use your iPhone from your Linux desktop.**
 
-No app is required on the iPhone for wireless mode. USB mode needs Developer
-Mode enabled once.
+Mirada puts your iPhone's screen in a window on Linux and sends your clicks,
+drags and typing back over Bluetooth. The phone sees the PC in Control Centre >
+Screen Mirroring, exactly like an Apple TV. No jailbreak, no sideloading, no app
+on the phone, no account.
 
-## Status
+[![pipeline](https://gitlab.com/HttpAnimations/iphone-mirror/badges/main/pipeline.svg)](https://gitlab.com/HttpAnimations/iphone-mirror/-/pipelines)
+[![release](https://gitlab.com/HttpAnimations/iphone-mirror/-/badges/release.svg)](https://gitlab.com/HttpAnimations/iphone-mirror/-/releases)
+[![license](https://img.shields.io/gitlab/license/HttpAnimations/iphone-mirror)](https://gitlab.com/HttpAnimations/iphone-mirror/-/blob/main/LICENSE)
+[![pages](https://img.shields.io/badge/site-landing-blue)](https://httpanimations.gitlab.io/iphone-mirror/)
 
-Design phase. No working code yet. See `docs/09-roadmap.md`.
+**[Landing page + downloads](https://httpanimations.gitlab.io/iphone-mirror/)**
+
+## What you get
+
+- The iPhone's screen live in a native window, over WiFi.
+- Clicks, drags, scrolling, and keyboard input back to the phone over Bluetooth.
+- A one-time guided pairing: everything after that is open-the-app, tap the
+  phone, done.
+- Dark, light, OLED and system themes; English, 简体中文, Русский and Gaeilge UI.
+- An in-app update checker wired to the release feed.
+
+## Install
+
+```sh
+curl -fLO https://httpanimations.gitlab.io/iphone-mirror/flatpak/key.gpg
+flatpak remote-add --if-not-exists --gpg-import=key.gpg mirada https://httpanimations.gitlab.io/iphone-mirror/flatpak
+flatpak install mirada gitlab.httpanimations.mirada
+```
+
+or one command:
+
+```sh
+flatpak install https://httpanimations.gitlab.io/iphone-mirror/mirada.flatpakref
+```
+
+.deb, .rpm, AppImage and zip builds for x86_64 and aarch64 live on the
+[releases page](https://gitlab.com/HttpAnimations/iphone-mirror/-/releases).
 
 ## How it works
 
-Short version: [UxPlay](https://github.com/FDH2/UxPlay) acts as the AirPlay
-receiver and forwards the H.264 stream to the app over loopback RTP. The app
-(a Flutter desktop app) decodes and renders it, and turns local input into HID
-reports. Input reaches the phone one of two ways:
+The receiver is [UxPlay](https://github.com/FDH2/UxPlay), the same AirPlay
+server every third-party mirror tool uses. Input goes back through a Bluetooth
+LE HID device the app advertises; iOS accepts it through AssistiveTouch. Pairing
+once is guided inside the app; afterwards the bond persists and control is
+instant.
 
-- **Bluetooth LE HID + AssistiveTouch** (wireless, stock iPhone): the PC
-  advertises itself as a BLE mouse/keyboard. iOS pairs it under
-  Settings > Accessibility > Touch > AssistiveTouch and moves a cursor.
-- **USB + Developer Mode** (iOS 17+): a pymobiledevice3 sidecar opens the
-  CoreDevice screen stream and injects real multitouch HID reports through
-  RemoteXPC. Feels like a touchscreen, not a cursor.
+## Screenshots
 
-Full details are in `docs/`.
-
-## Docs
-
-- `docs/00-overview.md` goals, non-goals, how it compares to Apple's iPhone Mirroring
-- `docs/01-architecture.md` components, process model, IPC
-- `docs/02-airplay-receiver.md` UxPlay integration, discovery, ports, pairing
-- `docs/03-video-pipeline.md` RTP loopback, GStreamer decode, Flutter texture
-- `docs/04-control-ble-hid.md` the AssistiveTouch input path
-- `docs/05-control-usb.md` the pymobiledevice3 input path
-- `docs/06-flutter-app.md` app layout, packages, platform channel
-- `docs/07-security-privacy.md` pairing, encryption, threat model
-- `docs/08-packaging.md` distro deps, flatpak, systemd, firewall
-- `docs/09-roadmap.md` milestones
-- `docs/research/upstream-projects.md` notes from reviewing related projects
+![Mirror](https://gitlab.com/HttpAnimations/iphone-mirror/-/raw/main/test/goldens/mirror_idle.png)
+![Settings](https://gitlab.com/HttpAnimations/iphone-mirror/-/raw/main/test/goldens/settings.png)
 
 ## License
 
-AGPL-3.0. Chosen deliberately: the AirPlay receiver this project builds on
-(UxPlay/RPiPlay) is GPL-3.0, and mirror/control software is exactly the kind
-of thing that should stay open even when run as a service.
+[AGPL-3.0](https://gitlab.com/HttpAnimations/iphone-mirror/-/blob/main/LICENSE)

@@ -1,0 +1,29 @@
+app-id: gitlab.httpanimations.mirada
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: mirada
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --share=network
+  - --socket=system-bus
+  - --talk-name=org.freedesktop.Notifications
+modules:
+  - name: mirada
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/mirada /app/bin
+      - cp -r bundle/* /app/lib/mirada/
+      - ln -s /app/lib/mirada/mirada /app/bin/mirada
+      - install -Dm644 mirada.desktop /app/share/applications/gitlab.httpanimations.mirada.desktop
+      - install -Dm644 mirada.png /app/share/icons/hicolor/256x256/apps/gitlab.httpanimations.mirada.png
+    sources:
+      - type: dir
+        path: ../../build/linux/x64/release/bundle
+        dest: bundle
+      - type: file
+        path: ../linux/mirada.desktop
+      - type: file
+        path: ../linux/mirada.png

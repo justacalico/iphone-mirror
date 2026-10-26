@@ -1,0 +1,297 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_all:
+        description: 'Build all targets'
+        type: boolean
+        default: true
+      create_release:
+        description: 'Create a versioned release from this build'
+        type: boolean
+        default: false
+      merge_request_id:
+        description: 'Merge request ID'
+        type: string
+        default: ''
+      merge_request_url:
+        description: 'Merge request URL'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: eroshenkoam/allure-cocogitto-action@v1
+        if: false
+      - name: Install cocogitto
+        run: |
+          curl -fsSL -o /tmp/cog.tar.gz "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-x86_64-unknown-linux-musl.tar.gz"
+          mkdir -p /tmp/cog && tar -xzf /tmp/cog.tar.gz -C /tmp/cog
+          sudo install -m 755 /tmp/cog/x86_64-unknown-linux-musl/cog /usr/local/bin/cog
+      - name: Check commits
+        run: cog check --from-latest-tag || cog check
+      - name: Analyze
+        run: flutter analyze
+      - name: Test with coverage
+        run: flutter test --coverage
+      - name: Require 100% line coverage
+        run: |
+          python3 - <<'PY'
+          lf = lh = 0
+          for l in open("coverage/lcov.info"):
+              if l.startswith("LF:"): lf += int(l[3:])
+              if l.startswith("LH:"): lh += int(l[3:])
+          print(f"coverage {lh}/{lf}")
+          assert lf > 0 and lh == lf, "line coverage below 100%"
+          PY
+
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: [verify]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, os: ubuntu-24.04, arch: x86_64 }
+          - { target: linux-aarch64, os: ubuntu-24.04-arm, arch: aarch64 }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev rpm dpkg-dev file appstream zsync
+      - name: Install Flutter (x86_64)
+        if: matrix.arch == 'x86_64'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install Flutter (aarch64)
+        if: matrix.arch == 'aarch64'
+        run: |
+          git clone --depth 1 -b ${{ env.FLUTTER_VERSION }} https://github.com/flutter/flutter.git $HOME/flutter
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          flutter precache --linux
+      - name: Build Linux bundle
+        run: flutter build linux --release
+      - name: Stage package tree
+        run: |
+          set -e
+          BUNDLE=$(find build/linux -type d -name bundle | head -1)
+          ROOT=pkgroot
+          rm -rf "$ROOT" && mkdir -p "$ROOT/usr/lib/mirada" "$ROOT/usr/bin" "$ROOT/usr/share/applications" "$ROOT/usr/share/icons/hicolor/256x256/apps"
+          cp -r "$BUNDLE"/* "$ROOT/usr/lib/mirada/"
+          printf '#!/bin/sh\nexec /usr/lib/mirada/mirada "$@"\n' > "$ROOT/usr/bin/mirada"
+          chmod +x "$ROOT/usr/bin/mirada"
+          sed 's/Icon=.*/Icon=mirada/' linux/my_application.cc 2>/dev/null || true
+          cp packaging/linux/mirada.desktop "$ROOT/usr/share/applications/" 2>/dev/null || printf '[Desktop Entry]\nType=Application\nName=Mirada\nExec=mirada\nIcon=mirada\nCategories=Utility;\n' > "$ROOT/usr/share/applications/mirada.desktop"
+          cp packaging/linux/mirada.png "$ROOT/usr/share/icons/hicolor/256x256/apps/mirada.png"
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Build zip + tar.gz
+        run: |
+          cd pkgroot && zip -qr ../artifacts.zip . && cd ..
+          mkdir -p artifacts && mv artifacts.zip "artifacts/mirada-linux-${{ matrix.arch }}.zip"
+          tar -czf "artifacts/mirada-linux-${{ matrix.arch }}.tar.gz" -C pkgroot .
+      - name: Build deb
+        run: |
+          mkdir -p pkgroot/DEBIAN
+          ARCH_DEB=$([ "${{ matrix.arch }}" = "x86_64" ] && echo amd64 || echo arm64)
+          printf 'Package: mirada\nVersion: %s\nArchitecture: %s\nMaintainer: Mirada CI <ci@gitlab.com>\nSection: misc\nPriority: optional\nDescription: Mirror and control your iPhone from Linux.\n' "$VERSION" "$ARCH_DEB" > pkgroot/DEBIAN/control
+          dpkg-deb --root-owner-group --build pkgroot "artifacts/mirada_${{ env.VERSION }}_${ARCH_DEB}.deb"
+      - name: Build rpm
+        run: |
+          ARCH_RPM=$([ "${{ matrix.arch }}" = "x86_64" ] && echo x86_64 || echo aarch64)
+          cat > /tmp/mirada.spec <<SPEC
+          Name: mirada
+          Version: $VERSION
+          Release: 1
+          Summary: Mirror and control your iPhone from Linux
+          License: AGPL-3.0
+          %description
+          Mirror and control your iPhone from Linux.
+          %files
+          /
+          %prep
+          %build
+          %install
+          mkdir -p %{buildroot}
+          cp -r "$GITHUB_WORKSPACE/pkgroot/"* %{buildroot}/
+          %post
+          %postun
+          SPEC
+          rpmbuild -bb --target "$ARCH_RPM" --buildroot "$GITHUB_WORKSPACE/pkgroot" --define "_topdir $GITHUB_WORKSPACE/rpmbuild" /tmp/mirada.spec || {
+            mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
+            cp /tmp/mirada.spec rpmbuild/SPECS/
+            sed -i 's|%files|%%files|' /dev/null 2>/dev/null || true
+          }
+          find rpmbuild -name '*.rpm' -exec cp {} "artifacts/" \; 2>/dev/null || true
+          ls artifacts/
+      - name: Build AppImage
+        run: |
+          APPIMAGE_ARCH=$([ "${{ matrix.arch }}" = "x86_64" ] && echo x86_64 || echo aarch64)
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${APPIMAGE_ARCH}.AppImage" -O /tmp/appimagetool
+          chmod +x /tmp/appimagetool
+          mkdir -p appdir/usr/bin appdir/usr/share/applications appdir/usr/share/icons/hicolor/256x256/apps
+          BUNDLE=$(find build/linux -type d -name bundle | head -1)
+          cp -r "$BUNDLE"/* appdir/usr/bin/
+          cp pkgroot/usr/share/applications/mirada.desktop appdir/
+          cp packaging/linux/mirada.png appdir/usr/share/icons/hicolor/256x256/apps/
+          cp packaging/linux/mirada.png appdir/mirada.png
+          printf '#!/bin/sh\nHERE="$(dirname "$(readlink -f "$0")")"\nexec "$HERE/usr/bin/mirada" "$@"\n' > appdir/AppRun
+          chmod +x appdir/AppRun
+          ln -sf mirada.png appdir/.DirIcon || true
+          /tmp/appimagetool appdir "artifacts/mirada-linux-${{ matrix.arch }}.AppImage"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 400
+
+  flatpak:
+    name: Flatpak ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    needs: [verify]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Install runtime
+        run: |
+          sudo flatpak install -y --noninteractive flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+      - name: Build flatpak
+        run: |
+          set -e
+          ARCH=${{ matrix.arch }}
+          sudo flatpak-builder --arch="$ARCH" --force-clean --repo=repo build-dir packaging/flatpak/gitlab.httpanimations.mirada.yaml
+          mkdir -p repo-${{ matrix.arch }}
+          cp -r repo/* repo-${{ matrix.arch }}/ || cp -r repo repo-${{ matrix.arch }}
+      - name: Upload flatpak repo
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-repo-${{ matrix.arch }}
+          path: repo-${{ matrix.arch }}
+          retention-days: 400
+
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    needs: [verify]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build web --release --base-href /iphone-mirror/app/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: build/web
+          retention-days: 400
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [build, web]
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    permissions:
+      contents: write
+    concurrency:
+      group: release-ops
+      cancel-in-progress: false
+    outputs:
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "release_tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Merge flatpak repos
+        run: |
+          mkdir -p flatpak-repo || true
+          if [ -d artifacts/flatpak-repo-x86_64 ]; then cp -r artifacts/flatpak-repo-x86_64/* flatpak-repo/ || cp -r artifacts/flatpak-repo-x86_64 flatpak-repo; fi
+          if [ -d artifacts/flatpak-repo-aarch64 ]; then
+            sudo apt-get update && sudo apt-get install -y ostree
+            for ref in $(cd artifacts/flatpak-repo-aarch64 && ostree --repo=. refs 2>/dev/null); do
+              ostree --repo=flatpak-repo pull-local artifacts/flatpak-repo-aarch64 "$ref" || true
+            done
+          fi
+          if [ -d flatpak-repo ] && [ -n "$(ls -A flatpak-repo 2>/dev/null)" ]; then
+            mkdir -p .gpg
+            echo "${{ secrets.FLATPAK_GPG_KEY }}" | base64 -d | gpg --batch --homedir .gpg --import || true
+            KEYID=$(gpg --homedir .gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+            sudo apt-get install -y flatpak
+            flatpak build-update-repo --gpg-sign="$KEYID" --gpg-homedir="$(pwd)/.gpg" flatpak-repo || true
+            tar -czf flatpak-repo.tar.gz -C flatpak-repo .
+          fi
+      - name: Prepare release assets
+        run: |
+          set -e
+          mkdir -p release-assets
+          find artifacts -type f \( -name 'mirada*' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.zip' -o -name '*.tar.gz' \) -exec cp {} release-assets/ \;
+          [ -f flatpak-repo.tar.gz ] && cp flatpak-repo.tar.gz release-assets/ || true
+          cd release-assets && sha256sum * > ../SHA256SUMS.txt && cd ..
+          cp SHA256SUMS.txt release-assets/
+          ls release-assets/
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.release_tag }}
+          name: Mirada ${{ steps.meta.outputs.release_tag }}
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trigger GitLab sync
+        run: |
+          curl -fsSL --max-time 30 --retry 2 -X POST \
+            -F token="${{ secrets.GITLAB_TRIGGER_TOKEN }}" \
+            -F "ref=main" \
+            -F "variables[GITHUB_RUN_ID]=${{ github.run_id }}" \
+            -F "variables[RELEASE_TAG]=${{ steps.meta.outputs.release_tag }}" \
+            "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_PROJECT_ID }}/trigger/pipeline"

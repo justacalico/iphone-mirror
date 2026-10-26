@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Mirada
+Comment=Mirror and control your iPhone from Linux
+Exec=mirada
+Icon=mirada
+Terminal=false
+Categories=Utility;

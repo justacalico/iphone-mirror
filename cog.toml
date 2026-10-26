@@ -1,0 +1,18 @@
+[changelog]
+path = "CHANGELOG.md"
+authors = [
+    { signature = "GitLab CI", username = "gitlab-ci", enabled = false },
+]
+pre_bump_hooks = []
+post_bump_hooks = []
+[commit_types]
+[changelog.commit_types]
+feat = { changelog_title = "Features" }
+fix = { changelog_title = "Bug Fixes" }
+misc = { changelog_title = "Other", bump_patch = false }
+[git]
+enable_unmerged_commits = false
+tag_prefix = "v"
+ignore_merge_commits = true
+[commit_parser]
+strip_next_version_tag_from_body = true
