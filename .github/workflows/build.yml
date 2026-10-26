@@ -63,12 +63,16 @@ jobs:
       - name: Require 100% line coverage
         run: |
           python3 - <<'PY'
-          lf = lh = 0
+          uncovered = []
+          cur = None
           for l in open("coverage/lcov.info"):
-              if l.startswith("LF:"): lf += int(l[3:])
-              if l.startswith("LH:"): lh += int(l[3:])
-          print(f"coverage {lh}/{lf}")
-          assert lf > 0 and lh == lf, "line coverage below 100%"
+              l = l.strip()
+              if l.startswith("SF:"): cur = l[3:]
+              elif l.startswith("DA:") and int(l.split(":")[1].split(",")[1]) == 0:
+                  uncovered.append(f"{cur}:{l}")
+          for u in uncovered[:30]: print(u)
+          assert not uncovered, f"{len(uncovered)} uncovered lines"
+          print("coverage 100%")
           PY
 
   build:
