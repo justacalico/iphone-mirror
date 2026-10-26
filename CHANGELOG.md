@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.2 - 2026-10-26
+#### Bug Fixes
+- 发布同步改用 Bearer 认证 - (0a450b1) - HttpAnimations
+- 发布同步脚本容错处理 - (c1da13b) - HttpAnimations
+- 发布同步改用 REST API 上传资产 - (ba75cbe) - HttpAnimations
+- 发布同步改用 PAT 鉴权 - (ebe1cac) - HttpAnimations
+- 修正发布同步脚本的 JSON 解析 - (a404728) - HttpAnimations
+
+- - -
+
 ## v0.1.1 - 2026-10-26
 #### Bug Fixes
 - pages 构建固定 Flutter 版本 - (dd6179b) - HttpAnimations
