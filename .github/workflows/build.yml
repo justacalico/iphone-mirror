@@ -146,6 +146,7 @@ jobs:
           %install
           mkdir -p %{buildroot}
           cp -r $GITHUB_WORKSPACE/pkgroot/* %{buildroot}/
+          rm -rf %{buildroot}/DEBIAN
           %files
           /usr/bin/mirada
           /usr/lib/mirada
