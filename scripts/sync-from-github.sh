@@ -80,7 +80,7 @@ for f in release-assets/*; do
   curl -fsSL --request PUT --header "Authorization: Bearer $GITLAB_TOKEN" \
     --upload-file "$f" \
     "$API/packages/generic/release-assets/$RELEASE_TAG/$ENC"
-  LINKS="${LINKS}{\"name\":\"$NAME\",\"url\":\"https://gitlab.com/$CI_PROJECT_PATH/-/releases/$RELEASE_TAG/downloads/$NAME\",\"direct_asset_path\":\"release-assets/$RELEASE_TAG/$ENC\",\"link_type\":\"package\"},"
+  LINKS="${LINKS}{\"name\":\"$NAME\",\"url\":\"https://gitlab.com/$CI_PROJECT_PATH/-/releases/$RELEASE_TAG/downloads/$NAME\",\"direct_asset_path\":\"/release-assets/$RELEASE_TAG/$ENC\",\"link_type\":\"package\"},"
 done
 LINKS="${LINKS%,}"
 curl -fsSL --request POST --header "Authorization: Bearer $GITLAB_TOKEN" --header "Content-Type: application/json" \
