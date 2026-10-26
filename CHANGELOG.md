@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.1 - 2026-10-26
+#### Bug Fixes
+- pages 构建固定 Flutter 版本 - (dd6179b) - HttpAnimations
+
+- - -
+
 ## v0.1.0 - 2026-10-26
 #### Features
 - 初始化 Mirada 应用、测试、打包与 CI - (d33d58c) - HttpAnimations
