@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.4 - 2026-10-26
+#### Bug Fixes
+- pages 镜像与 SDK 约束兼容 - (c3d5cf6) - HttpAnimations
+
+- - -
+
 ## v0.1.3 - 2026-10-26
 #### Bug Fixes
 - 修正发布资产链接路径 - (f807c29) - HttpAnimations
