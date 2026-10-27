@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -107,12 +108,17 @@ class LandingPage extends StatelessWidget {
                     FilledButton.icon(
                       icon: const Icon(Icons.download),
                       label: const Text('Install via Flatpak (.flatpakref)'),
-                      onPressed: () {},
+                      onPressed: () => html.window.open('mirada.flatpakref', '_blank'),
                     ),
                     FilledButton.tonalIcon(
                       icon: const Icon(Icons.code),
                       label: const Text('GitLab Releases'),
-                      onPressed: () {},
+                      onPressed: () => html.window.open('https://gitlab.com/HttpAnimations/iphone-mirror/-/releases', '_blank'),
+                    ),
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.open_in_new),
+                      label: const Text('Open the web app'),
+                      onPressed: () => html.window.open('app/', '_blank'),
                     ),
                   ]),
                   const SizedBox(height: 8),
