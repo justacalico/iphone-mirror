@@ -184,6 +184,7 @@ jobs:
     needs: [verify]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     continue-on-error: true
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -193,13 +194,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install flatpak tooling
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
+          sudo apt-get update -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
           sudo apt-get install -y flatpak flatpak-builder elfutils
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          timeout 120 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
       - name: Install runtime
         run: |
-          sudo flatpak install -y --noninteractive flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+          timeout 600 sudo flatpak install -y --noninteractive flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
       - name: Build flatpak
         run: |
           set -e
