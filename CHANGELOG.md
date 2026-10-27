@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.5 - 2026-10-27
+#### Bug Fixes
+- 所有 CI job 显式标注 linux-truenas - (42a63d1) - HttpAnimations
+
+- - -
+
 ## v0.1.4 - 2026-10-26
 #### Bug Fixes
 - pages 镜像与 SDK 约束兼容 - (c3d5cf6) - HttpAnimations

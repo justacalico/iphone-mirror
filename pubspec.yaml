@@ -2,7 +2,7 @@ name: mirada
 description: "Mirror and control your iPhone from Linux."
 publish_to: 'none'
 
-version: 0.1.4+1
+version: 0.1.5+1
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
