@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.7 - 2026-10-27
+#### Bug Fixes
+- 落地页忽略 web 专用库 lint - (66f7b2f) - HttpAnimations
+- 落地页按钮接上真实链接 - (a1cd5db) - HttpAnimations
+
+- - -
+
 ## v0.1.6 - 2026-10-27
 #### Bug Fixes
 - 发布同步改用项目访问令牌 - (88093b5) - HttpAnimations
